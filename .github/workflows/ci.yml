@@ -1,0 +1,78 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      NEXT_TELEMETRY_DISABLED: '1'
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .node-version
+          cache: npm
+      - run: npm ci
+      - run: npm test
+      - run: npm run lint
+      - run: npm run type-check
+      - run: npm run knip
+      # Shipped dependencies fail on moderate advisories. Build and lint tooling only fails on high,
+      # because its moderate advisories (such as minimatch GHSA-g3hv-75wg-m249) need trusted
+      # config input and often have no fix that the ESLint plugins accept yet.
+      - run: npm audit --omit=dev --audit-level=moderate
+      - run: npm audit --audit-level=high
+      - run: npm run build
+      - name: Install browser for cloud visual QA
+        if: github.event_name == 'pull_request'
+        run: |
+          npm install --prefix "$RUNNER_TEMP/portfolio-browser" --no-package-lock --ignore-scripts playwright@1.64.1
+          "$RUNNER_TEMP/portfolio-browser/node_modules/.bin/playwright" install --with-deps chromium
+      - name: Test the production server
+        env:
+          RUN_VISUAL_QA: ${{ github.event_name == 'pull_request' }}
+        run: |
+          npm run start -- --hostname 127.0.0.1 --port 3000 > "$RUNNER_TEMP/portfolio-server.log" 2>&1 &
+          server_pid=$!
+          trap 'kill "$server_pid" || true' EXIT
+          for attempt in $(seq 1 60); do
+            if curl --fail --silent http://127.0.0.1:3000 > /dev/null; then break; fi
+            sleep 1
+          done
+          npm run test:site
+          if [ "$RUN_VISUAL_QA" = true ]; then node .github/scripts/visual-qa.mjs; fi
+      - name: Save desktop and mobile screenshots
+        if: always() && github.event_name == 'pull_request'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: portfolio-visuals
+          path: |
+            ${{ runner.temp }}/portfolio-visuals
+            ${{ runner.temp }}/portfolio-server.log
+          if-no-files-found: ignore
+          retention-days: 7
+
+  docker:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Build production image
+        run: docker build --tag portfolio:ci .

@@ -1,0 +1,57 @@
+{
+  "name": "felix-huisinga-portfolio",
+  "version": "1.0.0",
+  "description": "The personal one-page website of Felix Huisinga",
+  "author": {
+    "name": "Felix Huisinga",
+    "url": "https://rabitem.de"
+  },
+  "license": "MIT",
+  "private": true,
+  "homepage": "https://rabitem.de",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/rabitem/rabitem-public-frontend"
+  },
+  "keywords": [
+    "portfolio",
+    "software",
+    "nextjs",
+    "typescript"
+  ],
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint",
+    "type-check": "tsc --noEmit",
+    "knip": "knip",
+    "test": "node --test .github/scripts/*.test.mjs",
+    "test:site": "node --test tests/*.test.mjs"
+  },
+  "dependencies": {
+    "lucide-react": "^1.64.0",
+    "next": "^16.4.3",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4.3.3",
+    "@types/node": "^26.6.6",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@typescript/native": "npm:typescript@^7.0.2",
+    "eslint": "^10.13.0",
+    "eslint-config-next": "^16.4.3",
+    "knip": "^6.43.0",
+    "tailwindcss": "^4.3.3",
+    "typescript": "npm:@typescript/typescript6@^6.0.2"
+  },
+  "overrides": {
+    "postcss": "8.5.32",
+    "sharp": "0.35.5"
+  },
+  "engines": {
+    "node": "^26.0.0"
+  }
+}
